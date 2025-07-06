@@ -1,0 +1,9 @@
+services:
+  - type: static
+    name: starpath
+    env: static
+    staticPublishPath: .
+    buildCommand: echo 'No build required for single HTML file'
+    envVars:
+      - key: NODE_ENV
+        value: productio
