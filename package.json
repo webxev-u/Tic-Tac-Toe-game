@@ -1,0 +1,9 @@
+{
+  "name": "starpath",
+  "version": "1.0.0",
+  "description": "StarPath: A cosmic puzzle game",
+  "private": true,
+  "scripts": {
+    "start": "echo 'Serving static files directly'"
+  }
+}
