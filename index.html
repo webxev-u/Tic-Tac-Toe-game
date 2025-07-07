@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic-Tac-Toe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Base styles */
+    body {
+      background: linear-gradient(135deg, #0d1b2a, #1b263b);
+      color: #e0e1dd;
+      font-family: 'Poppins', sans-serif;
+      transition: background 0.5s, color 0.5s;
+      overflow: hidden;
+    }
+    .light-theme {
+      background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+      color: #1b263b;
+    }
+    /* Glassmorphic container */
+    .glass-container {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+      border-radius: 16px;
+      padding: 1.5rem;
+    }
+    .light-theme .glass-container {
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    /* Glowing text */
+    .glow {
+      text-shadow: 0 0 5px #00ddeb, 0 0 10px #00ddeb, 0 0 20px #00ddeb;
+    }
+    .light-theme .glow {
+      text-shadow: 0 0 5px #ff6b6b, 0 0 10px #ff6b6b, 0 0 20px #ff6b6b;
+    }
+    /* Grid cells */
+    .cell {
+      background: #1b263b;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s, border 0.2s, box-shadow 0.2s;
+    }
+    .light-theme .cell {
+      background: #ffffff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    .cell:hover:not(.disabled) {
+      transform: scale(1.05);
+      border: 2px solid #00ddeb;
+      box-shadow: 0 0 15px #00ddeb;
+    }
+    .light-theme .cell:hover:not(.disabled) {
+      border: 2px solid #ff6b6b;
+      box-shadow: 0 0 15px #ff6b6b;
+    }
+    .winning {
+      border: 2px solid #00ff7f !important;
+      box-shadow: 0 0 20px #00ff7f !important;
+      animation: pulse 1s ease-in-out infinite;
+    }
+    .losing {
+      border: 2px solid #ff4040 !important;
+      box-shadow: 0 0 20px #ff4040 !important;
+    }
+    .disabled {
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    /* Animations */
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    /* Emoji buttons */
+    .emoji-btn {
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .emoji-btn:hover {
+      transform: scale(1.2);
+    }
+    .emoji-pop {
+      animation: pop 0.5s ease-out;
+    }
+    @keyframes pop {
+      0% { transform: scale(0); }
+      70% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+    /* Particle background */
+    #particles-js {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+    /* Aurora waves (light mode) */
+    .light-theme #particles-js::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(45deg, rgba(0, 221, 235, 0.2), rgba(255, 107, 107, 0.2));
+      animation: aurora 10s infinite;
+      z-index: -1;
+    }
+    @keyframes aurora {
+      0% { transform: translateY(0); opacity: 0.3; }
+      50% { transform: translateY(-20px); opacity: 0.5; }
+      100% { transform: translateY(0); opacity: 0.3; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center">
+  <!-- Particle background -->
+  <div id="particles-js"></div>
+  
+  <!-- Main container -->
+  <div class="container mx-auto p-4 max-w-md glass-container">
+    <!-- Title -->
+    <h1 class="text-4xl font-bold mb-6 animate-pulse glow">Tic-Tac-Toe</h1>
+    
+    <!-- Mode selection -->
+    <div id="mode-select" class="mb-6 flex justify-center gap-4">
+      <button id="twoPlayer" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition transform hover:scale-105 glow">Two Players</button>
+      <button id="aiMode" class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 transition transform hover:scale-105 glow">Play AI</button>
+    </div>
+    
+    <!-- Player setup -->
+    <div id="setup" class="mb-6 hidden">
+      <input id="player1" type="text" placeholder="Player 1 Nickname" class="p-2 rounded-lg bg-gray-800 text-white mb-2 w-full border border-gray-600 focus:border-blue-400 transition">
+      <input id="player2" type="text" placeholder="Player 2 Nickname" class="p-2 rounded-lg bg-gray-800 text-white mb-2 w-full border border-gray-600 focus:border-blue-400 transition hidden">
+      <button id="start" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 w-full transition transform hover:scale-105 glow">Start Game</button>
+    </div>
+    
+    <!-- Game UI -->
+    <div id="game" class="hidden">
+      <div id="status" class="text-2xl mb-4 glow"></div>
+      <div id="timer" class="text-xl mb-4">Time Left: 15s</div>
+      <div class="grid grid-cols-3 gap-3 w-full mx-auto mb-6">
+        <div id="cell0" class="cell text-4 anfont-bold flex items-center justify-center h-20 cursor-pointer"></div>
+        <div id="cell1" class="cell text-4xl font-bold flex items-center justify-center h-20 cursor-pointer"></div>
+        <div id="cell2" class="cell text-4xl font-bold flex items-center justify-center h-20 cursor-pointer"></div>
+        <div id="cell3" class="cell text-4xl font-bold flex items-center justify-center h-20 cursor-pointer"></div>
+        <div id="cell4" class="cell text-4xl font-bold flex items-center justify-center h-20 cursor-pointer"></div>
+        <div id="cell5" class="cell text-4xl font-bold flex items-center justify-center h-20 cursor-pointer"></div>
+        <div id="cell6" class="cell text-4xl font-bold flex items-center justify-center h-20 cursor-pointer"></div>
+        <div id="cell7" class="cell text-4xl font-bold flex items-center justify-center h-20 cursor-pointer"></div>
+        <div id="cell8" class="cell text-4xl font-bold flex items-center justify-center h-20 cursor-pointer"></div>
+      </div>
+      <div class="flex justify-center gap-4 mb-4">
+        <div class="text-xl glow">Score: <span id="score1">0</span> - <span id="score2">0</span></div>
+        <button id="theme" class="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition transform hover:scale-105 glow">Toggle Theme</button>
+        <button id="reset" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition transform hover:scale-105 glow">Reset Game</button>
+      </div>
+      <div id="reactions" class="mb-4 flex justify-center gap-4">
+        <span class="emoji-btn" data-emoji="😎">😎</span>
+        <span class="emoji-btn" data-emoji="🎉">🎉</span>
+        <span class="emoji-btn" data-emoji="🔥">🔥</span>
+        <span class="emoji-btn" data-emoji="👏">👏</span>
+      </div>
+      <div id="reaction-display" class="text-lg mb-4"></div>
+      <div id="history" class="text-left text-lg mb-4">
+        <h2 class="font-bold glow">Move History</h2>
+        <ul id="history-list" class="list-disc pl-5"></ul>
+      </div>
+      <div id="leaderboard" class="text-left text-lg">
+        <h2 class="font-bold glow">Leaderboard</h2>
+        <ul id="leaderboard-list" class="list-disc pl-5"></ul>
+      </div>
+    </div>
+    
+    <!-- Audio -->
+    <audio id="moveSound" src="https://cdn.pixabay.com/audio/2023/08/08/audio_6c0986a0ac.mp3"></audio>
+    <audio id="winSound" src="https://cdn.pixabay.com/audio/2023/08/08/audio_7b3f2b7f2b.mp3"></audio>
+  </div>
+
+  <script>
+    // Game state
+    let positionsPlayed = {};
+    let currentSymbol = 'X';
+    let gameOver = false;
+    let player1Name = '';
+    let player2Name = '';
+    let isAIMode = false;
+    let isAITurn = false;
+    let scores = JSON.parse(localStorage.getItem('ticTacToeScores')) || {};
+    let timeLeft = 15;
+    let timerId = null;
+    let moveHistory = [];
+    let reactions = [];
+    const waysOfWinning = [[0, 1, 2], [6, 7, 8], [0, 3, 6], [2, 5, 8], [3, 4, 5], [1, 4, 7], [0, 4, 8], [2, 4, 6]];
+    const corners = [0, 2, 6, 8];
+
+    // DOM elements
+    const statusDisplay = document.getElementById('status');
+    const timerDisplay = document.getElementById('timer');
+    const score1Display = document.getElementById('score1');
+    const score2Display = document.getElementById('score2');
+    const historyList = document.getElementById('history-list');
+    const leaderboardList = document.getElementById('leaderboard-list');
+    const reactionDisplay = document.getElementById('reaction-display');
+    const modeSelect = document.getElementById('mode-select');
+    const setupDiv = document.getElementById('setup');
+    const gameDiv = document.getElementById('game');
+    const player2Input = document.getElementById('player2');
+    const startBtn = document.getElementById('start');
+    const twoPlayerBtn = document.getElementById('twoPlayer');
+    const aiModeBtn = document.getElementById('aiMode');
+    const themeBtn = document.getElementById('theme');
+    const resetBtn = document.getElementById('reset');
+    const moveSound = document.getElementById('moveSound');
+    const winSound = document.getElementById('winSound');
+
+    // Initialize particles.js
+    particlesJS('particles-js', {
+      particles: {
+        number: { value: 60 },
+        color: { value: document.body.classList.contains('light-theme') ? '#1b263b' : '#e0e1dd' },
+        shape: { type: 'circle' },
+        opacity: { value: 0.4 },
+        size: { value: 3, random: true },
+        move: { speed: 1.5, direction: 'random' }
+      }
+    });
+
+    // Update leaderboard
+    function updateLeaderboard() {
+      leaderboardList.innerHTML = '';
+      const sortedScores = Object.entries(scores).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      sortedScores.forEach(([name, score]) => {
+        const li = document.createElement('li');
+        li.textContent = `${name}: ${score} wins`;
+        leaderboardList.appendChild(li);
+      });
+    }
+    updateLeaderboard();
+
+    // Mode selection
+    twoPlayerBtn.addEventListener('click', () => {
+      isAIMode = false;
+      player2Input.classList.remove('hidden');
+      modeSelect.classList.add('hidden');
+      setupDiv.classList.remove('hidden');
+    });
+    aiModeBtn.addEventListener('click', () => {
+      isAIMode = true;
+      player2Input.classList.add('hidden');
+      modeSelect.classList.add('hidden');
+      setupDiv.classList.remove('hidden');
+    });
+
+    // Start game
+    startBtn.addEventListener('click', () => {
+      player1Name = document.getElementById('player1').value.trim() || 'Player 1';
+      player2Name = isAIMode ? 'AI' : document.getElementById('player2').value.trim() || 'Player 2';
+      scores[player1Name] = scores[player1Name] || 0;
+      scores[player2Name] = scores[player2Name] || 0;
+      score1Display.textContent = scores[player1Name];
+      score2Display.textContent = scores[player2Name];
+      localStorage.setItem('ticTacToeScores', JSON.stringify(scores));
+      setupDiv.classList.add('hidden');
+      gameDiv.classList.remove('hidden');
+      resetGame();
+    });
+
+    // Theme toggle
+    themeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('light-theme');
+      const isLight = document.body.classList.contains('light-theme');
+      document.querySelectorAll('.cell').forEach(cell => {
+        cell.classList.toggle('bg-white', isLight);
+        cell.classList.toggle('bg-gray-800', !isLight);
+      });
+      particlesJS('particles-js', {
+        particles: {
+          number: { value: 60 },
+          color: { value: isLight ? '#1b263b' : '#e0e1dd' },
+          shape: { type: 'circle' },
+          opacity: { value: 0.4 },
+          size: { value: 3, random: true },
+          move: { speed: 1.5, direction: 'random' }
+        }
+      });
+    });
+
+    // Timer logic
+    function startTimer() {
+      timeLeft = 15;
+      timerDisplay.textContent = `Time Left: ${timeLeft}s`;
+      clearInterval(timerId);
+      timerId = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `Time Left: ${timeLeft}s`;
+        if (timeLeft <= 0 && !isAIMode) {
+          currentSymbol = currentSymbol === 'X' ? 'O' : 'X';
+          statusDisplay.textContent = `${currentSymbol === 'X' ? player1Name : player2Name}'s Turn`;
+          startTimer();
+        }
+      }, 1000);
+    }
+
+    // Check for wins
+    function checkForWins() {
+      for (let winList of waysOfWinning) {
+        if (winList.every(idx => idx in positionsPlayed && positionsPlayed[idx].symbol === currentSymbol)) {
+          highlightWin(winList, currentSymbol);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Highlight winning cells
+    function highlightWin(winList, symbol) {
+      gameOver = true;
+      clearInterval(timerId);
+      const winner = symbol === 'X' ? player1Name : player2Name;
+      statusDisplay.textContent = `${winner} Wins!`;
+      scores[winner]++;
+      localStorage.setItem('ticTacToeScores', JSON.stringify(scores));
+      score1Display.textContent = scores[player1Name];
+      score2Display.textContent = scores[player2Name];
+      updateLeaderboard();
+      Object.keys(positionsPlayed).forEach(idx => {
+        const cell = document.getElementById(`cell${idx}`);
+        cell.classList.add(winList.includes(parseInt(idx)) ? 'winning' : 'losing');
+      });
+      winSound.play();
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      reactions.push(`${winner} won! React with an emoji!`);
+      reactionDisplay.innerHTML = `<span class="emoji-pop">${reactions[reactions.length - 1]}</span>`;
+    }
+
+    // AI logic
+    function aiPlay() {
+      if (gameOver || !isAITurn) return;
+      toggleBoardInteraction(false);
+      setTimeout(() => {
+        let spot = null;
+        // Win or block win
+        for (let lst of waysOfWinning) {
+          const [a, b, c] = lst;
+          if (a in positionsPlayed && b in positionsPlayed && positionsPlayed[a].symbol === positionsPlayed[b].symbol && !(c in positionsPlayed)) {
+            spot = c;
+            break;
+          }
+          if (a in positionsPlayed && c in positionsPlayed && positionsPlayed[a].symbol === positionsPlayed[c].symbol && !(b in positionsPlayed)) {
+            spot = b;
+            break;
+          }
+          if (b in positionsPlayed && c in positionsPlayed && positionsPlayed[b].symbol === positionsPlayed[c].symbol && !(a in positionsPlayed)) {
+            spot = a;
+            break;
+          }
+        }
+        // Strategic moves
+        if (!spot) {
+          if (!Object.keys(positionsPlayed).length) {
+            spot = corners[Math.floor(Math.random() * corners.length)];
+          } else if (Object.keys(positionsPlayed).length === 1 && !(4 in positionsPlayed)) {
+            spot = 4;
+          } else {
+            const available = Array.from({length: 9}, (_, i) => i).filter(i => !(i in positionsPlayed));
+            spot = available[Math.floor(Math.random() * available.length)];
+          }
+        }
+        if (spot !== null && !(spot in positionsPlayed)) {
+          positionsPlayed[spot] = { symbol: currentSymbol };
+          document.getElementById(`cell${spot}`).textContent = currentSymbol;
+          moveSound.play();
+          moveHistory.push(`${player2Name} placed ${currentSymbol} at position ${spot + 1}`);
+          historyList.innerHTML = moveHistory.map(move => `<li>${move}</li>`).join('');
+          if (waysOfWinning.some(lst => lst.includes(spot) && lst.filter(i => positionsPlayed[i]?.symbol === currentSymbol).length === 2)) {
+            reactions.push(`${player2Name} is close to winning! React!`);
+            reactionDisplay.innerHTML = `<span class="emoji-pop">${reactions[reactions.length - 1]}</span>`;
+          }
+          currentSymbol = 'X';
+          isAITurn = false;
+          analyze();
+          toggleBoardInteraction(true);
+        }
+      }, 500);
+    }
+
+    // Toggle board interaction
+    function toggleBoardInteraction(enable) {
+      document.querySelectorAll('.cell').forEach(cell => {
+        cell.classList.toggle('disabled', !enable);
+      });
+    }
+
+    // Analyze game state
+    function analyze() {
+      if (Object.keys(positionsPlayed).length === 9 && !checkForWins()) {
+        statusDisplay.textContent = "It's a Draw!";
+        gameOver = true;
+        clearInterval(timerId);
+        Object.keys(positionsPlayed).forEach(idx => {
+          document.getElementById(`cell${idx}`).classList.add('losing');
+        });
+        reactions.push(`Draw game! React with an emoji!`);
+        reactionDisplay.innerHTML = `<span class="emoji-pop">${reactions[reactions.length - 1]}</span>`;
+      } else if (!checkForWins()) {
+        currentSymbol = currentSymbol === 'X' ? 'O' : 'X';
+        statusDisplay.textContent = `${currentSymbol === 'X' ? player1Name : player2Name}'s Turn`;
+        if (isAIMode && currentSymbol === 'O') {
+          isAITurn = true;
+          aiPlay();
+        } else {
+          startTimer();
+          toggleBoardInteraction(true);
+        }
+      }
+    }
+
+    // Handle cell click
+    function handleClick(index) {
+      if (gameOver || positionsPlayed[index] || isAITurn) return;
+      positionsPlayed[index] = { symbol: currentSymbol };
+      document.getElementById(`cell${index}`).textContent = currentSymbol;
+      moveSound.play();
+      moveHistory.push(`${currentSymbol === 'X' ? player1Name : player2Name} placed ${currentSymbol} at position ${index + 1}`);
+      historyList.innerHTML = moveHistory.map(move => `<li>${move}</li>`).join('');
+      if (waysOfWinning.some(lst => lst.includes(index) && lst.filter(i => positionsPlayed[i]?.symbol === currentSymbol).length === 2)) {
+        reactions.push(`${currentSymbol === 'X' ? player1Name : player2Name} is close to winning! React!`);
+        reactionDisplay.innerHTML = `<span class="emoji-pop">${reactions[reactions.length - 1]}</span>`;
+      }
+      analyze();
+    }
+
+    // Handle emoji reactions
+    document.querySelectorAll('.emoji-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const emoji = btn.dataset.emoji;
+        reactions.push(`${currentSymbol === 'X' ? player2Name : player1Name} reacted with ${emoji}`);
+        reactionDisplay.innerHTML = `<span class="emoji-pop">${reactions[reactions.length - 1]}</span>`;
+      });
+    });
+
+    // Reset game
+    function resetGame() {
+      positionsPlayed = {};
+      gameOver = false;
+      currentSymbol = 'X';
+      isAITurn = false;
+      statusDisplay.textContent = `${player1Name}'s Turn`;
+      moveHistory = [];
+      reactions = [];
+      historyList.innerHTML = '';
+      reactionDisplay.textContent = '';
+      for (let i = 0; i < 9; i++) {
+        const cell = document.getElementById(`cell${i}`);
+        cell.textContent = '';
+        cell.classList.remove('winning', 'losing', 'bg-white', 'bg-gray-800', 'disabled');
+        cell.classList.add(document.body.classList.contains('light-theme') ? 'bg-white' : 'bg-gray-800');
+      }
+      if (isAIMode && currentSymbol === 'O') {
+        isAITurn = true;
+        aiPlay();
+      } else {
+        startTimer();
+        toggleBoardInteraction(true);
+      }
+    }
+
+    // Event listeners
+    for (let i = 0; i < 9; i++) {
+      const cell = document.getElementById(`cell${i}`);
+      cell.addEventListener('click', () => handleClick(i));
+      cell.addEventListener('touchstart', (e) => { e.preventDefault(); handleClick(i); });
+    }
+    resetBtn.addEventListener('click', resetGame);
+  </script>
+</body>
+  </html
